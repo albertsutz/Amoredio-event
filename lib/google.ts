@@ -1,5 +1,11 @@
 import { google } from "googleapis";
-import type { DriveFile, EventFolder, ResponsesData } from "./types";
+import type {
+  BirthdayPerson,
+  DriveFile,
+  EventFolder,
+  MonthBirthdays,
+  ResponsesData,
+} from "./types";
 
 const SPREADSHEET_MIME = "application/vnd.google-apps.spreadsheet";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -165,4 +171,175 @@ export async function readResponses(
   };
 
   return { headers, rows, detected };
+}
+
+/** Extract a Google Sheets spreadsheet ID from a full URL, or pass through a raw ID. */
+function extractSpreadsheetId(urlOrId: string): string {
+  const match = urlOrId.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : urlOrId.trim();
+}
+
+function looksLikeFullName(header: string) {
+  const h = header.trim().toLowerCase();
+  return h.includes("nama lengkap") || h.includes("full name") || looksLikeName(h);
+}
+
+function looksLikeBirthday(header: string) {
+  const h = header.trim().toLowerCase();
+  return h.includes("ulang tahun") || h.includes("birthday") || h.includes("birth");
+}
+
+/**
+ * Match the old sheet's full-date "Birthday" column, while avoiding the
+ * month-name-only "Birthday Month" column.
+ */
+function looksLikeBirthdayDate(header: string) {
+  const h = header.trim().toLowerCase();
+  if (h === "birthday") return true;
+  return (
+    (h.includes("birthday") ||
+      h.includes("ulang tahun") ||
+      h.includes("tanggal lahir")) &&
+    !h.includes("month")
+  );
+}
+
+/**
+ * Parse a birthday cell written as day/month/year (e.g. "15/06/1990",
+ * "15-6-1990", "15.06.90"). Returns null if the day/month can't be read.
+ */
+function parseDayMonth(raw: string): { day: number; month: number } | null {
+  const parts = raw.split(/[^0-9]+/).filter(Boolean);
+  if (parts.length < 2) return null;
+  const day = Number(parts[0]);
+  const month = Number(parts[1]);
+  if (!Number.isInteger(day) || !Number.isInteger(month)) return null;
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+  return { day, month };
+}
+
+/**
+ * Parse a birthday cell written as day-monthName-year (e.g. "17-Feb-1997",
+ * "3 March 1990"). Returns null if the day/month can't be read.
+ */
+function parseDayMonthName(raw: string): { day: number; month: number } | null {
+  const parts = raw.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  if (parts.length < 2) return null;
+  const day = Number(parts[0]);
+  const month = parseMonthName(parts[1]);
+  if (!Number.isInteger(day) || day < 1 || day > 31) return null;
+  if (month == null) return null;
+  return { day, month };
+}
+
+const MONTH_LOOKUP: Record<string, number> = {
+  january: 1, jan: 1, januari: 1,
+  february: 2, feb: 2, februari: 2,
+  march: 3, mar: 3, maret: 3,
+  april: 4, apr: 4,
+  may: 5, mei: 5,
+  june: 6, jun: 6, juni: 6,
+  july: 7, jul: 7, juli: 7,
+  august: 8, aug: 8, agustus: 8,
+  september: 9, sep: 9, sept: 9,
+  october: 10, oct: 10, oktober: 10,
+  november: 11, nov: 11,
+  december: 12, dec: 12, desember: 12,
+};
+
+/** Parse a month name string ("January", "Mei", "Sep") into a 1-12 number. */
+function parseMonthName(raw: string): number | null {
+  return MONTH_LOOKUP[raw.trim().toLowerCase()] ?? null;
+}
+
+/**
+ * Read a sheet's first tab and return {name, raw-birthday} pairs, using the
+ * given matcher to locate the birthday column.
+ */
+async function readBirthdayRows(
+  accessToken: string,
+  configured: string,
+  birthdayMatcher: (header: string) => boolean,
+): Promise<{ name: string; raw: string }[]> {
+  const spreadsheetId = extractSpreadsheetId(configured);
+  const sheets = google.sheets({ version: "v4", auth: oauthClient(accessToken) });
+
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const firstSheet = meta.data.sheets?.[0]?.properties?.title;
+  if (!firstSheet) throw new Error("Spreadsheet has no sheets.");
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: firstSheet,
+    valueRenderOption: "UNFORMATTED_VALUE",
+    dateTimeRenderOption: "FORMATTED_STRING",
+  });
+
+  const values = (res.data.values ?? []) as unknown[][];
+  if (values.length === 0) return [];
+
+  const headers = values[0].map((h) => String(h ?? "").trim());
+  const nameIdx = headers.findIndex(looksLikeFullName);
+  const birthdayIdx = headers.findIndex(birthdayMatcher);
+
+  if (nameIdx === -1 || birthdayIdx === -1) {
+    throw new Error(
+      `Could not find the name and birthday columns in sheet ${spreadsheetId}.`,
+    );
+  }
+
+  const rows: { name: string; raw: string }[] = [];
+  for (const row of values.slice(1)) {
+    const name = String(row[nameIdx] ?? "").trim();
+    const raw = String(row[birthdayIdx] ?? "").trim();
+    if (!name || !raw) continue;
+    rows.push({ name, raw });
+  }
+  return rows;
+}
+
+/**
+ * Read the member sheets and return everyone whose birthday falls in the given
+ * month (1-12), kept as two separate lists:
+ *   - newMembers: BIRTHDAY_SHEET_ID_NEW — full date in "Ulang Tahun/ Birthday"
+ *     (day/month/year), sorted by day.
+ *   - oldMembers: BIRTHDAY_SHEET_ID_OLD — full date in "Birthday" written as
+ *     "17-Feb-1997", sorted by day. Optional (legacy, to be removed later).
+ */
+export async function readBirthdaysForMonth(
+  accessToken: string,
+  month: number,
+): Promise<MonthBirthdays> {
+  const newId = process.env.BIRTHDAY_SHEET_ID_NEW;
+  if (!newId) {
+    throw new Error(
+      "BIRTHDAY_SHEET_ID_NEW is not set. Add the members sheet's URL or ID to your environment.",
+    );
+  }
+  const oldId = process.env.BIRTHDAY_SHEET_ID_OLD;
+
+  const newMembers: BirthdayPerson[] = [];
+  const oldMembers: BirthdayPerson[] = [];
+
+  // New sheet — full date, day/month/year.
+  const newRows = await readBirthdayRows(accessToken, newId, looksLikeBirthday);
+  for (const { name, raw } of newRows) {
+    const parsed = parseDayMonth(raw);
+    if (!parsed || parsed.month !== month) continue;
+    newMembers.push({ name, day: parsed.day, month: parsed.month, raw });
+  }
+  newMembers.sort((a, b) => (a.day ?? 0) - (b.day ?? 0));
+
+  // Old sheet — full date in "Birthday" (e.g. "17-Feb-1997"). Optional.
+  if (oldId) {
+    const oldRows = await readBirthdayRows(accessToken, oldId, looksLikeBirthdayDate);
+    for (const { name, raw } of oldRows) {
+      const parsed = parseDayMonthName(raw);
+      if (!parsed || parsed.month !== month) continue;
+      oldMembers.push({ name, day: parsed.day, month: parsed.month, raw });
+    }
+    oldMembers.sort((a, b) => (a.day ?? 0) - (b.day ?? 0));
+  }
+
+  return { newMembers, oldMembers };
 }

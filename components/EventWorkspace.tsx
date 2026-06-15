@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import EmailEditor from "./EmailEditor";
+import { EMAIL_FOOTER_HTML } from "@/lib/emailFooter";
 import type {
   DriveFile,
   Recipient,
@@ -21,16 +22,33 @@ interface LocalAttachment extends SendAttachment {
 
 const MAX_TOTAL_ATTACHMENT_BYTES = 20 * 1024 * 1024; // 20 MB, under Gmail's limit
 
-function template(kind: "reminder" | "thanks", eventName: string) {
+/** Strip a leading list number like "1." or "2) " from a folder/event name. */
+function cleanEventName(name: string): string {
+  return name.replace(/^\s*\d+\s*[.)]\s*/, "").trim();
+}
+
+function template(kind: "reminder" | "thanks", rawEventName: string) {
+  const eventName = cleanEventName(rawEventName);
   if (kind === "reminder") {
     return {
       subject: `Reminder: ${eventName} is coming up`,
-      html: `<p>Dear {name},</p><p>This is a friendly reminder that <strong>${eventName}</strong> is happening soon. We're looking forward to seeing you there!</p><p>If you have any questions, just reply to this email.</p><p>Warm regards,<br/>The Team</p>`,
+      html: `<p>Hai {name}! 👋</p>
+<p><strong>${eventName}</strong> — [describe the event here]! 🥳</p>
+<p>📅 [date]<br/>⏰ [time]<br/>📍 [location]</p>
+<p><strong>Acaranya:</strong><br/>[agenda]</p>
+<p>👗 Dress code: [dress code]</p>
+<p>Can't wait to see you all there! 🎂🙌</p>
+<p>With love,<br/>AmoreDio ✨</p>${EMAIL_FOOTER_HTML}`,
     };
   }
   return {
     subject: `Thank you for joining ${eventName}!`,
-    html: `<p>Dear {name},</p><p>Thank you so much for being part of <strong>${eventName}</strong>. It was wonderful to have you with us.</p><p>We hope to see you again at our next event!</p><p>Warm regards,<br/>The Team</p>`,
+    html: `<p>Hello {name}! 👋</p>
+<p>We're glad that you came to <strong>${eventName}</strong> 🎉 We hope you found the event valuable and enjoyable.</p>
+<p>Please feel free to share any feedback or suggestions, as we are always looking to improve future events.</p>
+<p>👉 Share your feedback here: <a href="[feedback form URL]">[feedback form URL]</a></p>
+<p>We look forward to seeing you at our next event! 😊</p>
+<p>Warm regards,<br/>AmoreDio 💙</p>${EMAIL_FOOTER_HTML}`,
   };
 }
 

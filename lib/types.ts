@@ -22,6 +22,23 @@ export interface ResponsesData {
   };
 }
 
+export interface BirthdayPerson {
+  name: string;
+  /** Day of month, 1-31. Undefined when the source only has a birthday month. */
+  day?: number;
+  /** Month, 1-12. */
+  month: number;
+  /** The raw birthday cell value, for display fallback. */
+  raw: string;
+}
+
+export interface MonthBirthdays {
+  /** New membership sheet — full dates, sorted by day. */
+  newMembers: BirthdayPerson[];
+  /** Old (legacy) membership sheet — month only, sorted by name. */
+  oldMembers: BirthdayPerson[];
+}
+
 export interface Recipient {
   name: string;
   email: string;

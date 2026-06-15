@@ -1,0 +1,15 @@
+// Shared sign-off appended to every outgoing email template (reminder & thanks).
+// The catholic.sg logo is embedded as a data-URI <img>; lib/mime.ts converts it
+// to a Gmail-friendly inline CID part at send time.
+
+const CATHOLIC_LOGO_SRC =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAAOCAYAAABzTn/UAAABS2lUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNS42LWMxNDIgNzkuMTYwOTI0LCAyMDE3LzA3LzEzLTAxOjA2OjM5ICAgICAgICAiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIi8+CiA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgo8P3hwYWNrZXQgZW5kPSJyIj8+nhxg7wAAA4pJREFUSInN11uIVlUUB/DfjF9hqWk6YXezpEjJzMyulmBJRVlkQb0ESdHFyjJDCDzJISrroQi1HooMyheNorKIegg0SKUBydQkC7vQlGmCEanN2MNahzl9jDMOGPWHj33W3muts+77fC0LFiyQOBsP4Uoch414B8vQ4X+Ksiz7xd/I9Vqsajq7uPa74SDyN+NRfIlZ/Xrzf4SGyGbd2a+SnopzsLAX+TMxGaP+HfMOPxp4sEb/ign4M+mR+LkX+e9z/ebwm3ZIaOCv/gi0YlqNflO3s4Sz87ACa7ASMzAcG/BM8k3AJtyJW/Ax7siz55K+Kek2PIFv0Y6n0ZJnj2G1fyYBnsRazE16VNqyvyiKrqIoXi2KYsihONwQZVvhu6bzIXi2aW8mFuM0HJN7R4mh1yVKfJroa6L/R+OtpLdgF14Szp6H83EVJuIyUTkv1N55RepdnfTnGIHNGIzr8UBvjhZFMQJTGziitn+giW8PzhBZ78Q6nJrODcV9WJIGXJDyy1J2HwaJKhktsjkuDd2FRbgRF4mb4USRxZnY0WRHdUu0i2COELNmbPOULori9rSrE/ekXY+k/vUNbNWd5ZE9BKcNt6ZRJ+Te3lz/yLVTd7CqyT8vfxVacWk+f4RjMR3b83liTd/BcLQIEHxSc3IgXsdskYDBIqDD8QqWiltkZys+qymc2fSCu0XUHxYR3Z77VZ8PynVATaYz1w6R+d9rDlf8T4mSnYExuddW07GvyY7W2lr1e70au0R77RPtsVJUzzhx44zGerzXihdrgifjU9EPL4s+gy/EMNqZ9PCDGFbH85gk2qDi3ZzPP+AUkZVdubcVR+ZztRIVUwVxj/gggik1ngNlWU4vy/I33IthOCv92YBrxFx4uyW/tBbi8V6M7wktuA3LRSYn5f4q8SGzBPfjazEHZuG1NH4RPhDlOQNjRVkvT511jMF83CWme6k70GsxEOemcz+Jvp0iMvoh5oiZMBcDq35bKCb0HFEGA7Abb+T5daKMZ6dBw3J/aA+BaBfZ25L0GtGbe0XpXS4ye7oYmG0Yn7xb09DBqfsAfkldW1LPfjHJF+PClHtfZLlL9OtSKIpiPK5OG3ZgXUvtW7rCSWI4dIgS6g3zxdWyTXcvHiompwMb+2LsBcdjb5Zyj8jr6BJsK8tyU6MHnh/78cLdIij9kamwrm+WPtHR15+Hsix34t2K/htlDuUDPuHEfwAAAABJRU5ErkJggg==";
+
+/** Raw footer block included at the end of both email templates. */
+export const EMAIL_FOOTER_HTML = `<p style="margin-top:24px">Let's stay connected!</p>
+<p style="margin:4px 0">📱 Follow us on Instagram for updates: <strong><a href="https://www.instagram.com/amoredio.sg/">@amoredio.sg</a></strong></p>
+<p style="margin:4px 0">💬 Join our AmoreDio community channel: <strong><a href="http://bit.ly/amoreannounce">bit.ly/amoreannounce</a></strong></p>
+<hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0" />
+<p style="margin:4px 0">Roman Catholic Archdiocese of Singapore &nbsp;|&nbsp; <a href="https://www.catholic.sg/"><img src="${CATHOLIC_LOGO_SRC}" alt="catholic.sg" style="vertical-align:middle;height:20px" /></a></p>
+<p style="margin:4px 0"><em>"A Vibrant, Evangelising, Missionary Church"</em></p>
+<p style="margin:12px 0 0;font-size:12px;color:#94a3b8">Privileged/Confidential information may be contained in this message. If you are not the intended recipient, please delete this email and notify the sender.</p>`;

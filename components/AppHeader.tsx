@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import SignOutButton from "./SignOutButton";
+import MainNav from "./MainNav";
 
 export default async function AppHeader() {
   const session = await auth();
@@ -20,6 +21,7 @@ export default async function AppHeader() {
 
         {user ? (
           <div className="flex items-center gap-3">
+            <MainNav />
             <span className="hidden text-sm text-slate-500 sm:inline">
               {user.email}
             </span>

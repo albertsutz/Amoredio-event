@@ -4,6 +4,7 @@ import { readBirthdaysForMonth } from "@/lib/google";
 import { MONTH_NAMES, ordinal, buildBirthdayMessage } from "@/lib/birthday";
 import type { BirthdayPerson, MonthBirthdays } from "@/lib/types";
 import CopyBirthdaysButton from "@/components/CopyBirthdaysButton";
+import MonthTabs from "@/components/MonthTabs";
 
 function BirthdayList({
   title,
@@ -14,9 +15,23 @@ function BirthdayList({
   people: BirthdayPerson[];
   monthName: string;
 }) {
+  // Group by cell group, preserving sorted order within each group.
+  const groups = new Map<string, BirthdayPerson[]>();
+  for (const person of people) {
+    const key = person.cellGroup || "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(person);
+  }
+  // Sort group keys: named groups alphabetically, empty last.
+  const sortedKeys = [...groups.keys()].sort((a, b) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  });
+
   return (
     <section>
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
         {title}
       </h2>
       {people.length === 0 ? (
@@ -24,22 +39,31 @@ function BirthdayList({
           No birthdays in {monthName}.
         </div>
       ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {people.map((person, i) => (
-            <li
-              key={`${person.name}-${i}`}
-              className="flex items-center justify-between px-5 py-3.5"
-            >
-              <span className="text-sm font-medium text-slate-900">
-                {person.name}
-              </span>
-              <span className="text-sm text-slate-500">
-                {monthName}
-                {person.day != null ? ` ${ordinal(person.day)}` : ""}
-              </span>
-            </li>
+        <div className="flex flex-col gap-4">
+          {sortedKeys.map((key) => (
+            <div key={key}>
+              {key && (
+                <p className="mb-1.5 text-xs font-medium text-slate-500">{key}</p>
+              )}
+              <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {groups.get(key)!.map((person, i) => (
+                  <li
+                    key={`${person.name}-${i}`}
+                    className="flex items-center justify-between px-5 py-3.5"
+                  >
+                    <span className="text-sm font-medium text-slate-900">
+                      {person.name}
+                    </span>
+                    <span className="text-sm text-slate-500">
+                      {monthName}
+                      {person.day != null ? ` ${ordinal(person.day)}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
@@ -85,45 +109,44 @@ export default async function BirthdaysPage() {
           {error}
         </div>
       ) : (
-        <div className="flex flex-col gap-12">
-          <div className="flex flex-col gap-8">
-            <h2 className="text-lg font-semibold text-slate-800">
-              This month: {thisMonthName}
-            </h2>
-            <BirthdayList
-              title="New docs"
-              people={thisData.newMembers}
-              monthName={thisMonthName}
-            />
-            <BirthdayList
-              title="Old docs"
-              people={thisData.oldMembers}
-              monthName={thisMonthName}
-            />
-            <div className="flex justify-center border-t border-slate-200 pt-6">
-              <CopyBirthdaysButton text={buildBirthdayMessage(thisData, thisMonth)} />
+        <MonthTabs
+          thisMonthName={thisMonthName}
+          nextMonthName={nextMonthName}
+          thisMonthContent={
+            <div className="flex flex-col gap-8">
+              <BirthdayList
+                title="New docs"
+                people={thisData.newMembers}
+                monthName={thisMonthName}
+              />
+              <BirthdayList
+                title="Old docs"
+                people={thisData.oldMembers}
+                monthName={thisMonthName}
+              />
+              <div className="flex justify-center border-t border-slate-200 pt-6">
+                <CopyBirthdaysButton text={buildBirthdayMessage(thisData, thisMonth)} />
+              </div>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-8">
-            <h2 className="text-lg font-semibold text-slate-800">
-              Next month: {nextMonthName}
-            </h2>
-            <BirthdayList
-              title="New docs"
-              people={nextData.newMembers}
-              monthName={nextMonthName}
-            />
-            <BirthdayList
-              title="Old docs"
-              people={nextData.oldMembers}
-              monthName={nextMonthName}
-            />
-            <div className="flex justify-center border-t border-slate-200 pt-6">
-              <CopyBirthdaysButton text={buildBirthdayMessage(nextData, nextMonth)} />
+          }
+          nextMonthContent={
+            <div className="flex flex-col gap-8">
+              <BirthdayList
+                title="New docs"
+                people={nextData.newMembers}
+                monthName={nextMonthName}
+              />
+              <BirthdayList
+                title="Old docs"
+                people={nextData.oldMembers}
+                monthName={nextMonthName}
+              />
+              <div className="flex justify-center border-t border-slate-200 pt-6">
+                <CopyBirthdaysButton text={buildBirthdayMessage(nextData, nextMonth)} />
+              </div>
             </div>
-          </div>
-        </div>
+          }
+        />
       )}
     </div>
   );

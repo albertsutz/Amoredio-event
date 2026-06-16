@@ -30,6 +30,8 @@ export interface BirthdayPerson {
   month: number;
   /** The raw birthday cell value, for display fallback. */
   raw: string;
+  /** Cell group name, e.g. "CG 1". Empty string if not found in the sheet. */
+  cellGroup: string;
 }
 
 export interface MonthBirthdays {

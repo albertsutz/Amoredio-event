@@ -35,7 +35,27 @@ function birthdayLine(p: BirthdayPerson, monthName: string): string {
   return `• ${p.name} — ${monthName}${p.day != null ? ` ${ordinal(p.day)}` : ""}`;
 }
 
-/** Build the copy-to-clipboard text for a month's birthdays, as two lists. */
+function groupByCG(people: BirthdayPerson[], monthName: string): string {
+  const groups = new Map<string, BirthdayPerson[]>();
+  for (const p of people) {
+    const key = p.cellGroup || "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  }
+  const sortedKeys = [...groups.keys()].sort((a, b) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  });
+  return sortedKeys
+    .map((key) => {
+      const lines = groups.get(key)!.map((p) => birthdayLine(p, monthName));
+      return key ? `${key}:\n${lines.join("\n")}` : lines.join("\n");
+    })
+    .join("\n\n");
+}
+
+/** Build the copy-to-clipboard text for a month's birthdays, grouped by CG. */
 export function buildBirthdayMessage(
   data: MonthBirthdays,
   month: number,
@@ -49,16 +69,10 @@ export function buildBirthdayMessage(
 
   const sections: string[] = [];
   if (newMembers.length > 0) {
-    sections.push(
-      "New docs:\n" +
-        newMembers.map((p) => birthdayLine(p, monthName)).join("\n"),
-    );
+    sections.push("New docs:\n" + groupByCG(newMembers, monthName));
   }
   if (oldMembers.length > 0) {
-    sections.push(
-      "Old docs:\n" +
-        oldMembers.map((p) => birthdayLine(p, monthName)).join("\n"),
-    );
+    sections.push("Old docs:\n" + groupByCG(oldMembers, monthName));
   }
 
   return `🎂 Birthdays in ${monthName} 🎂\n\n${sections.join("\n\n")}`;

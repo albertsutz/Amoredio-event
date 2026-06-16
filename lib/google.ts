@@ -189,6 +189,11 @@ function looksLikePreferredName(header: string) {
   return h.includes("nama pilihan") || h.includes("preferred name") || h.includes("nickname");
 }
 
+function looksLikeCellGroup(header: string) {
+  const h = header.trim().toLowerCase();
+  return h === "cg" || h === "cell group" || h.includes("cell group");
+}
+
 function looksLikeBirthday(header: string) {
   const h = header.trim().toLowerCase();
   return h.includes("ulang tahun") || h.includes("birthday") || h.includes("birth");
@@ -265,7 +270,7 @@ async function readBirthdayRows(
   accessToken: string,
   configured: string,
   birthdayMatcher: (header: string) => boolean,
-): Promise<{ name: string; raw: string }[]> {
+): Promise<{ name: string; raw: string; cellGroup: string }[]> {
   const spreadsheetId = extractSpreadsheetId(configured);
   const sheets = google.sheets({ version: "v4", auth: oauthClient(accessToken) });
 
@@ -287,6 +292,7 @@ async function readBirthdayRows(
   const nameIdx = headers.findIndex(looksLikeFullName);
   const preferredNameIdx = headers.findIndex(looksLikePreferredName);
   const birthdayIdx = headers.findIndex(birthdayMatcher);
+  const cellGroupIdx = headers.findIndex(looksLikeCellGroup);
 
   if (nameIdx === -1 || birthdayIdx === -1) {
     throw new Error(
@@ -294,15 +300,17 @@ async function readBirthdayRows(
     );
   }
 
-  const rows: { name: string; raw: string }[] = [];
+  const rows: { name: string; raw: string; cellGroup: string }[] = [];
   for (const row of values.slice(1)) {
     const fullName = String(row[nameIdx] ?? "").trim();
     const preferredName =
       preferredNameIdx !== -1 ? String(row[preferredNameIdx] ?? "").trim() : "";
     const name = preferredName || fullName;
     const raw = String(row[birthdayIdx] ?? "").trim();
+    const cellGroup =
+      cellGroupIdx !== -1 ? String(row[cellGroupIdx] ?? "").trim() : "";
     if (!name || !raw) continue;
-    rows.push({ name, raw });
+    rows.push({ name, raw, cellGroup });
   }
   return rows;
 }
@@ -332,20 +340,20 @@ export async function readBirthdaysForMonth(
 
   // New sheet — full date, day/month/year.
   const newRows = await readBirthdayRows(accessToken, newId, looksLikeBirthday);
-  for (const { name, raw } of newRows) {
+  for (const { name, raw, cellGroup } of newRows) {
     const parsed = parseDayMonth(raw);
     if (!parsed || parsed.month !== month) continue;
-    newMembers.push({ name, day: parsed.day, month: parsed.month, raw });
+    newMembers.push({ name, day: parsed.day, month: parsed.month, raw, cellGroup });
   }
   newMembers.sort((a, b) => (a.day ?? 0) - (b.day ?? 0));
 
   // Old sheet — full date in "Birthday" (e.g. "17-Feb-1997"). Optional.
   if (oldId) {
     const oldRows = await readBirthdayRows(accessToken, oldId, looksLikeBirthdayDate);
-    for (const { name, raw } of oldRows) {
+    for (const { name, raw, cellGroup } of oldRows) {
       const parsed = parseDayMonthName(raw);
       if (!parsed || parsed.month !== month) continue;
-      oldMembers.push({ name, day: parsed.day, month: parsed.month, raw });
+      oldMembers.push({ name, day: parsed.day, month: parsed.month, raw, cellGroup });
     }
     oldMembers.sort((a, b) => (a.day ?? 0) - (b.day ?? 0));
   }

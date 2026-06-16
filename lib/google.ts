@@ -184,6 +184,11 @@ function looksLikeFullName(header: string) {
   return h.includes("nama lengkap") || h.includes("full name") || looksLikeName(h);
 }
 
+function looksLikePreferredName(header: string) {
+  const h = header.trim().toLowerCase();
+  return h.includes("nama pilihan") || h.includes("preferred name") || h.includes("nickname");
+}
+
 function looksLikeBirthday(header: string) {
   const h = header.trim().toLowerCase();
   return h.includes("ulang tahun") || h.includes("birthday") || h.includes("birth");
@@ -280,6 +285,7 @@ async function readBirthdayRows(
 
   const headers = values[0].map((h) => String(h ?? "").trim());
   const nameIdx = headers.findIndex(looksLikeFullName);
+  const preferredNameIdx = headers.findIndex(looksLikePreferredName);
   const birthdayIdx = headers.findIndex(birthdayMatcher);
 
   if (nameIdx === -1 || birthdayIdx === -1) {
@@ -290,7 +296,10 @@ async function readBirthdayRows(
 
   const rows: { name: string; raw: string }[] = [];
   for (const row of values.slice(1)) {
-    const name = String(row[nameIdx] ?? "").trim();
+    const fullName = String(row[nameIdx] ?? "").trim();
+    const preferredName =
+      preferredNameIdx !== -1 ? String(row[preferredNameIdx] ?? "").trim() : "";
+    const name = preferredName || fullName;
     const raw = String(row[birthdayIdx] ?? "").trim();
     if (!name || !raw) continue;
     rows.push({ name, raw });

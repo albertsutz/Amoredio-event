@@ -52,13 +52,19 @@ export default async function BirthdaysPage() {
   }
 
   const now = new Date();
-  const month = now.getMonth() + 1; // 1-12
-  const monthName = MONTH_NAMES[month - 1];
+  const thisMonth = now.getMonth() + 1; // 1-12
+  const nextMonth = thisMonth === 12 ? 1 : thisMonth + 1;
+  const thisMonthName = MONTH_NAMES[thisMonth - 1];
+  const nextMonthName = MONTH_NAMES[nextMonth - 1];
 
-  let data: MonthBirthdays = { newMembers: [], oldMembers: [] };
+  let thisData: MonthBirthdays = { newMembers: [], oldMembers: [] };
+  let nextData: MonthBirthdays = { newMembers: [], oldMembers: [] };
   let error: string | null = null;
   try {
-    data = await readBirthdaysForMonth(session.accessToken!, month);
+    [thisData, nextData] = await Promise.all([
+      readBirthdaysForMonth(session.accessToken!, thisMonth),
+      readBirthdaysForMonth(session.accessToken!, nextMonth),
+    ]);
   } catch (err) {
     error = err instanceof Error ? err.message : "Failed to load birthdays";
   }
@@ -67,10 +73,10 @@ export default async function BirthdaysPage() {
     <div className="mx-auto max-w-3xl px-6 py-10">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-          Birthdays in {monthName}
+          Upcoming Birthdays
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Members celebrating their birthday this month.
+          Members celebrating their birthday this month and next.
         </p>
       </div>
 
@@ -79,20 +85,43 @@ export default async function BirthdaysPage() {
           {error}
         </div>
       ) : (
-        <div className="flex flex-col gap-8">
-          <BirthdayList
-            title="New docs"
-            people={data.newMembers}
-            monthName={monthName}
-          />
-          <BirthdayList
-            title="Old docs"
-            people={data.oldMembers}
-            monthName={monthName}
-          />
+        <div className="flex flex-col gap-12">
+          <div className="flex flex-col gap-8">
+            <h2 className="text-lg font-semibold text-slate-800">
+              This month: {thisMonthName}
+            </h2>
+            <BirthdayList
+              title="New docs"
+              people={thisData.newMembers}
+              monthName={thisMonthName}
+            />
+            <BirthdayList
+              title="Old docs"
+              people={thisData.oldMembers}
+              monthName={thisMonthName}
+            />
+            <div className="flex justify-center border-t border-slate-200 pt-6">
+              <CopyBirthdaysButton text={buildBirthdayMessage(thisData, thisMonth)} />
+            </div>
+          </div>
 
-          <div className="flex justify-center border-t border-slate-200 pt-6">
-            <CopyBirthdaysButton text={buildBirthdayMessage(data, month)} />
+          <div className="flex flex-col gap-8">
+            <h2 className="text-lg font-semibold text-slate-800">
+              Next month: {nextMonthName}
+            </h2>
+            <BirthdayList
+              title="New docs"
+              people={nextData.newMembers}
+              monthName={nextMonthName}
+            />
+            <BirthdayList
+              title="Old docs"
+              people={nextData.oldMembers}
+              monthName={nextMonthName}
+            />
+            <div className="flex justify-center border-t border-slate-200 pt-6">
+              <CopyBirthdaysButton text={buildBirthdayMessage(nextData, nextMonth)} />
+            </div>
           </div>
         </div>
       )}
